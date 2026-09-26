@@ -1,0 +1,21 @@
+name: validate
+on: [push, pull_request]
+jobs:
+  skills:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Every skill is discoverable by the skills CLI
+        env:
+          DISABLE_TELEMETRY: "1"
+        run: |
+          out=$(npx -y skills@1.7.0 add ./ --list)
+          echo "$out"
+          for dir in skills/*/; do
+            name=$(basename "$dir")
+            grep -q "^name: $name$" "$dir/SKILL.md" || { echo "::error::$name: frontmatter name must match its folder"; exit 1; }
+            echo "$out" | grep -q "$name" || { echo "::error::$name not found by the skills CLI"; exit 1; }
+          done
